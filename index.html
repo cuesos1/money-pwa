@@ -9,15 +9,16 @@
   <meta name="description" content="Локальный калькулятор распределения денег. Работает офлайн.">
   <title>Распределение денег</title>
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" href="./icons/icon-192.png">
-  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="icon" href="./icons/icon-192-v5.png">
+  <link rel="apple-touch-icon" href="./icons/icon-180-v5.png">
   <link rel="stylesheet" href="./styles.css">
   <script src="./calculator.js" defer></script>
+  <script src="./ledger.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
   <main>
-    <header><div><p class="eyebrow">ПРОСТО И ПО ПЛАНУ</p><h1>Распределение<br>денег</h1></div><button id="settings-toggle" class="glass icon-button" aria-label="Настройки процентов" aria-expanded="false" aria-controls="settings">⚙</button></header>
+    <header><div><p class="eyebrow">ТВОЙ ДОХОД · ТВОЙ ПЛАН</p><h1>Распределение<br>денег</h1></div><div class="header-actions"><button id="theme-toggle" class="glass icon-button" aria-label="Включить тёмную тему" aria-pressed="false">☾</button><button id="settings-toggle" class="glass icon-button" aria-label="Настройки процентов" aria-expanded="false" aria-controls="settings">⚙</button></div></header>
     <section class="glass income" aria-labelledby="income-label">
       <label id="income-label" for="income">Сколько получил?</label>
       <div class="amount-input"><input id="income" type="text" inputmode="decimal" placeholder="0" autocomplete="off" maxlength="20" aria-describedby="income-error"><span>₽</span></div>
@@ -25,6 +26,30 @@
       <p class="hint">Введи сумму — всё уже посчитано.</p>
     </section>
     <section id="results" class="cards" aria-label="Распределение суммы" aria-live="polite" aria-atomic="true"></section>
+    <button id="record-income" class="primary record-button" disabled>Записать доход <span aria-hidden="true">↗</span></button>
+    <p id="record-status" class="hint" role="status">В статистику попадают только записанные суммы.</p>
+    <details class="glass expense-panel"><summary>− Записать расход</summary>
+      <form id="expense-form" novalidate>
+        <label for="expense-amount">Сколько потратил?</label><input id="expense-amount" inputmode="decimal" placeholder="850 ₽" maxlength="20" required>
+        <label for="expense-category">Из какой категории?</label><select id="expense-category"><option value="0">Кредитка — платёж по долгу</option><option value="1" selected>Жизнь — продукты, жильё, транспорт</option><option value="2">Резерв — непредвиденные траты</option><option value="3">Свободные — покупки и развлечения</option></select>
+        <label for="expense-note">На что? <span class="hint">Необязательно</span></label><input id="expense-note" maxlength="120" placeholder="Например, продукты">
+        <label for="expense-date">Когда?</label><input id="expense-date" type="date" required>
+        <p class="hint">Перевод в резерв не считается расходом. Покупку с кредитки запиши по назначению; «Кредитка» здесь — погашение долга.</p>
+        <button id="record-expense" class="primary" type="submit" disabled>Записать расход</button><p id="expense-status" class="hint" role="status"></p>
+      </form>
+    </details>
+    <section class="glass weekly" aria-labelledby="weekly-title">
+      <div class="section-heading"><h2 id="weekly-title">Статистика</h2><span class="local-badge">На устройстве</span></div>
+      <label class="sr-only" for="period">Период статистики</label><select id="period"><option value="7">За 7 дней</option><option value="month">Этот месяц</option><option value="previous">Прошлый месяц</option><option value="year">Этот год</option><option value="all">Всё время</option><option value="custom">Свои даты</option></select>
+      <div id="custom-dates" hidden><label for="period-start">С</label><input id="period-start" type="date"><label for="period-end">По</label><input id="period-end" type="date"></div><p id="period-error" class="error" role="alert"></p>
+      <p id="week-range" class="hint"></p><p id="week-total" class="week-total">0 ₽</p>
+      <div id="week-chart" class="week-chart" role="img" aria-label="Доход по дням"></div>
+      <div class="summary-totals"><div><span>Расходы</span><strong id="expense-total">0 ₽</strong></div><div><span>Доходы − расходы</span><strong id="net-total">0 ₽</strong></div></div>
+      <p class="hint">Остаток за выбранный период — не баланс банковского счёта. Если записываешь покупки с кредитки и её погашение, общий расход включает оба движения.</p>
+      <div id="week-breakdown" class="week-breakdown"></div>
+      <p id="week-count" class="hint">Пока нет записей.</p>
+      <details id="history-details"><summary>Доходы и расходы за период</summary><ul id="history" class="history"></ul></details>
+    </section>
     <section id="settings" class="glass settings" hidden aria-labelledby="settings-title">
       <h2 id="settings-title">Твои проценты</h2>
       <p class="hint">В сумме должно быть ровно 100%.</p>
