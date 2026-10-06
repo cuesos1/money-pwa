@@ -17,7 +17,7 @@
 </head>
 <body>
   <main>
-    <header><div><p class="eyebrow">ПРОСТО И ПО ПЛАНУ</p><h1>Распределение<br>денег</h1></div><button id="settings-toggle" class="glass icon-button" aria-label="Настройки процентов" aria-expanded="false" aria-controls="settings">⚙</button></header>
+    <header><div><p class="eyebrow">ТВОЙ ДОХОД · ТВОЙ ПЛАН</p><h1>Распределение<br>денег</h1></div><div class="header-actions"><button id="theme-toggle" class="glass icon-button" aria-label="Включить тёмную тему" aria-pressed="false">☾</button><button id="settings-toggle" class="glass icon-button" aria-label="Настройки процентов" aria-expanded="false" aria-controls="settings">⚙</button></div></header>
     <section class="glass income" aria-labelledby="income-label">
       <label id="income-label" for="income">Сколько получил?</label>
       <div class="amount-input"><input id="income" type="text" inputmode="decimal" placeholder="0" autocomplete="off" maxlength="20" aria-describedby="income-error"><span>₽</span></div>
@@ -25,6 +25,16 @@
       <p class="hint">Введи сумму — всё уже посчитано.</p>
     </section>
     <section id="results" class="cards" aria-label="Распределение суммы" aria-live="polite" aria-atomic="true"></section>
+    <button id="record-income" class="primary record-button" disabled>Записать доход <span aria-hidden="true">↗</span></button>
+    <p id="record-status" class="hint" role="status">В статистику попадают только записанные суммы.</p>
+    <section class="glass weekly" aria-labelledby="weekly-title">
+      <div class="section-heading"><h2 id="weekly-title">За 7 дней</h2><span class="local-badge">На устройстве</span></div>
+      <p id="week-range" class="hint"></p><p id="week-total" class="week-total">0 ₽</p>
+      <div id="week-chart" class="week-chart" role="img" aria-label="Доход по дням"></div>
+      <div id="week-breakdown" class="week-breakdown"></div>
+      <p id="week-count" class="hint">Пока нет записей.</p>
+      <details id="history-details"><summary>Записи за 7 дней</summary><ul id="history" class="history"></ul></details>
+    </section>
     <section id="settings" class="glass settings" hidden aria-labelledby="settings-title">
       <h2 id="settings-title">Твои проценты</h2>
       <p class="hint">В сумме должно быть ровно 100%.</p>

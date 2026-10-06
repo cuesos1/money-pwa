@@ -1,5 +1,5 @@
 'use strict';
-const CACHE = 'money-pwa-v1';
+const CACHE = 'money-pwa-v2';
 const ASSETS = ['./', './index.html', './styles.css', './calculator.js', './app.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS))); });
 self.addEventListener('activate', event => {
