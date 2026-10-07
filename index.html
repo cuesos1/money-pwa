@@ -1,66 +1,43 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-theme="dark" data-accent="jade">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#eef2fa">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="description" content="Локальный калькулятор распределения денег. Работает офлайн.">
-  <title>Распределение денег</title>
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" href="./icons/icon-192-v5.png">
-  <link rel="apple-touch-icon" href="./icons/icon-180-v5.png">
-  <link rel="stylesheet" href="./styles.css">
-  <script src="./calculator.js" defer></script>
-  <script src="./ledger.js" defer></script>
-  <script src="./app.js" defer></script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101a19"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="Поток — доходы, расходы и план погашения долгов. Данные только на устройстве.">
+<title>Поток</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon-192-v6.png"><link rel="apple-touch-icon" href="./icons/icon-180-v6.png"><link rel="stylesheet" href="./styles.css">
+<script src="./calculator.js" defer></script><script src="./finance.js" defer></script><script src="./ledger.js" defer></script><script src="./store.js" defer></script><script src="./ui.js" defer></script><script src="./app.js" defer></script>
 </head>
 <body>
-  <main>
-    <header><div><p class="eyebrow">ТВОЙ ДОХОД · ТВОЙ ПЛАН</p><h1>Распределение<br>денег</h1></div><div class="header-actions"><button id="theme-toggle" class="glass icon-button" aria-label="Включить тёмную тему" aria-pressed="false">☾</button><button id="settings-toggle" class="glass icon-button" aria-label="Настройки процентов" aria-expanded="false" aria-controls="settings">⚙</button></div></header>
-    <section class="glass income" aria-labelledby="income-label">
-      <label id="income-label" for="income">Сколько получил?</label>
-      <div class="amount-input"><input id="income" type="text" inputmode="decimal" placeholder="0" autocomplete="off" maxlength="20" aria-describedby="income-error"><span>₽</span></div>
-      <p id="income-error" class="error" role="alert"></p>
-      <p class="hint">Введи сумму — всё уже посчитано.</p>
-    </section>
-    <section id="results" class="cards" aria-label="Распределение суммы" aria-live="polite" aria-atomic="true"></section>
-    <button id="record-income" class="primary record-button" disabled>Записать доход <span aria-hidden="true">↗</span></button>
-    <p id="record-status" class="hint" role="status">В статистику попадают только записанные суммы.</p>
-    <details class="glass expense-panel"><summary>− Записать расход</summary>
-      <form id="expense-form" novalidate>
-        <label for="expense-amount">Сколько потратил?</label><input id="expense-amount" inputmode="decimal" placeholder="850 ₽" maxlength="20" required>
-        <label for="expense-category">Из какой категории?</label><select id="expense-category"><option value="0">Кредитка — платёж по долгу</option><option value="1" selected>Жизнь — продукты, жильё, транспорт</option><option value="2">Резерв — непредвиденные траты</option><option value="3">Свободные — покупки и развлечения</option></select>
-        <label for="expense-note">На что? <span class="hint">Необязательно</span></label><input id="expense-note" maxlength="120" placeholder="Например, продукты">
-        <label for="expense-date">Когда?</label><input id="expense-date" type="date" required>
-        <p class="hint">Перевод в резерв не считается расходом. Покупку с кредитки запиши по назначению; «Кредитка» здесь — погашение долга.</p>
-        <button id="record-expense" class="primary" type="submit" disabled>Записать расход</button><p id="expense-status" class="hint" role="status"></p>
-      </form>
-    </details>
-    <section class="glass weekly" aria-labelledby="weekly-title">
-      <div class="section-heading"><h2 id="weekly-title">Статистика</h2><span class="local-badge">На устройстве</span></div>
-      <label class="sr-only" for="period">Период статистики</label><select id="period"><option value="7">За 7 дней</option><option value="month">Этот месяц</option><option value="previous">Прошлый месяц</option><option value="year">Этот год</option><option value="all">Всё время</option><option value="custom">Свои даты</option></select>
-      <div id="custom-dates" hidden><label for="period-start">С</label><input id="period-start" type="date"><label for="period-end">По</label><input id="period-end" type="date"></div><p id="period-error" class="error" role="alert"></p>
-      <p id="week-range" class="hint"></p><p id="week-total" class="week-total">0 ₽</p>
-      <div id="week-chart" class="week-chart" role="img" aria-label="Доход по дням"></div>
-      <div class="summary-totals"><div><span>Расходы</span><strong id="expense-total">0 ₽</strong></div><div><span>Доходы − расходы</span><strong id="net-total">0 ₽</strong></div></div>
-      <p class="hint">Остаток за выбранный период — не баланс банковского счёта. Если записываешь покупки с кредитки и её погашение, общий расход включает оба движения.</p>
-      <div id="week-breakdown" class="week-breakdown"></div>
-      <p id="week-count" class="hint">Пока нет записей.</p>
-      <details id="history-details"><summary>Доходы и расходы за период</summary><ul id="history" class="history"></ul></details>
-    </section>
-    <section id="settings" class="glass settings" hidden aria-labelledby="settings-title">
-      <h2 id="settings-title">Твои проценты</h2>
-      <p class="hint">В сумме должно быть ровно 100%.</p>
-      <form id="settings-form" novalidate>
-        <div id="percentage-fields"></div>
-        <p id="settings-status" role="status"></p>
-        <div class="actions"><button type="submit" class="primary">Сохранить</button><button id="reset" type="button" class="secondary">Сбросить</button></div>
-      </form>
-    </section>
-    <footer><p id="offline-status">Все данные остаются на этом устройстве.</p><button id="install" class="secondary" hidden>Установить приложение</button><p id="install-help" class="hint">На iPhone: Safari → Поделиться → На экран «Домой». На Android: меню браузера → Установить приложение.</p></footer>
-    <noscript>Для расчёта включи JavaScript в браузере.</noscript>
-  </main>
-</body>
-</html>
+<div id="splash" aria-hidden="true"><div class="brand-mark">≋</div><span>Поток</span></div>
+<main>
+<header><div><p class="eyebrow">ЛИЧНЫЕ ФИНАНСЫ · ЛОКАЛЬНО</p><h1 id="app-name">Поток</h1></div><button id="settings-toggle" class="icon-button" aria-label="Открыть настройки"><span data-icon="sliders"></span></button></header>
+<nav class="tabs" aria-label="Разделы"><button id="tab-plan" aria-current="page">Распределить</button><button id="tab-stats">История</button></nav>
+<section id="plan-panel">
+<section class="glass income"><label for="income">Сколько получил?</label><div class="amount-input"><input id="income" inputmode="decimal" placeholder="0" autocomplete="off" maxlength="20" aria-describedby="income-error"><span>₽</span></div><p id="income-error" class="error" role="alert"></p><div class="date-row"><label for="income-date">Дата дохода</label><input id="income-date" type="date"></div></section>
+<section id="results" class="cards" aria-label="Распределение суммы" aria-live="polite"></section>
+<button id="record-income" class="primary wide" disabled>Записать доход <span data-icon="arrow"></span></button><p id="record-status" class="status" role="status">В историю попадают только записанные суммы.</p>
+<button id="expense-open" class="secondary wide"><span data-icon="minus"></span> Записать расход</button>
+<p class="hint optional-hint">Введи сумму, распредели и запиши. Все данные остаются на этом устройстве.</p>
+</section>
+<section id="stats-panel" hidden>
+<div class="section-heading"><h2>Обзор</h2><span class="badge">На устройстве</span></div>
+<div id="period-picker"></div><div id="custom-dates" class="two-fields" hidden><label>С<input id="period-start" type="date"></label><label>По<input id="period-end" type="date"></label></div><p id="period-error" class="error" role="alert"></p>
+<section class="glass stats-summary"><p id="week-range" class="hint"></p><p class="eyebrow">ДОХОДЫ</p><p id="week-total" class="week-total">0 ₽</p><div id="week-chart" class="week-chart" role="img" aria-label="Доходы по дням"></div><div class="summary-totals"><div><span>Расходы</span><strong id="expense-total">0 ₽</strong></div><div><span>Разница</span><strong id="net-total">0 ₽</strong></div></div></section>
+<p class="hint optional-hint">Разница относится к выбранному периоду, а не к балансу счёта. Переводы между своими счетами — не расходы.</p>
+<div id="week-breakdown" class="week-breakdown"></div><h2 class="history-heading">Записи</h2><p id="week-count" class="hint"></p><ul id="history" class="history"></ul>
+</section>
+<footer><p id="offline-status">Подключаю локальное хранилище…</p><button id="install" class="secondary" hidden>Установить</button><p id="install-help" class="hint optional-hint">iPhone: Safari → Поделиться → На экран «Домой». Android: меню браузера → Установить приложение.</p></footer>
+<noscript>Для расчёта включи JavaScript.</noscript>
+</main>
+<dialog id="settings" class="sheet"><div class="sheet-header"><h2>Настройки</h2><button class="icon-button close-dialog" aria-label="Закрыть настройки"><span data-icon="close"></span></button></div>
+<nav id="settings-tabs" class="settings-tabs" aria-label="Разделы настроек"><button data-section="appearance" aria-current="page">Вид</button><button data-section="categories">Категории</button><button data-section="debts">Долги</button></nav>
+<form id="settings-form" novalidate>
+<section data-settings-section="appearance"><label>Название на экране<input id="setting-name" maxlength="24" required></label><div id="theme-picker"></div><fieldset class="accent-field"><legend>Цвет акцента</legend><div id="accent-options"></div></fieldset><div id="view-toggles"></div><p class="hint">Название установленного приложения — «Поток». Здесь меняется подпись внутри приложения.</p></section>
+<section data-settings-section="categories" hidden><p class="hint">Активные категории должны дать ровно 100%. Отключённые остаются в истории.</p><div id="percentage-fields"></div><button id="add-category" type="button" class="secondary wide">+ Добавить категорию</button><button id="reset" type="button" class="text-button">Вернуть 35 / 40 / 10 / 15</button><p id="category-total" class="status"></p></section>
+<section data-settings-section="debts" hidden><label class="switch-row"><span>Есть задолженности</span><input id="debt-enabled" type="checkbox" role="switch"></label><div id="debt-content"><p class="hint">Внеси текущий остаток каждого долга. История расходов не уменьшает его автоматически.</p><label>Ожидаемый доход в месяц, ₽<input id="monthly-income" inputmode="decimal" placeholder="Например, 80000"></label><div id="debt-category-picker"></div><div id="debt-list"></div><button id="add-debt" type="button" class="secondary wide">+ Добавить долг</button><button id="calculate-debts" type="button" class="secondary wide">Рассчитать план</button><div id="debt-result" class="debt-result" aria-live="polite"></div><button id="apply-debt-share" type="button" class="primary wide" hidden>Применить процент к распределению</button><p class="hint">Оценка: фиксированный платёж каждый месяц, ставка / 12, без комиссий, новых покупок, льготного периода и изменения ставки. Банковский график может отличаться.</p></div><div id="no-debt-content" hidden><p>Можно отключить категорию долгов и распределить её долю между остальными пропорционально.</p><button id="no-debt-preset" type="button" class="secondary wide">Перераспределить без долгов</button><p class="hint">Долги и история не удаляются. Новую схему нужно сохранить.</p></div></section>
+<p id="settings-status" class="status" role="status"></p><div class="sticky-actions"><button type="submit" class="primary wide">Сохранить настройки</button></div>
+</form></dialog>
+<dialog id="expense-dialog" class="sheet"><div class="sheet-header"><h2>Расход</h2><button class="icon-button close-dialog" aria-label="Закрыть расход"><span data-icon="close"></span></button></div><form id="expense-form" novalidate><label>Сумма, ₽<input id="expense-amount" inputmode="decimal" maxlength="20" placeholder="0"></label><div id="expense-category-picker"></div><label>На что? <span class="hint">Необязательно</span><input id="expense-note" maxlength="120" placeholder="Например, продукты"></label><label>Дата<input id="expense-date" type="date"></label><p class="hint optional-hint">Погашение долга — отдельное движение. Если записать и покупку с кредитки, и её погашение, расходы включат оба движения.</p><p id="expense-status" class="status" role="status"></p><button id="record-expense" class="primary wide" type="submit" disabled>Записать расход</button></form></dialog>
+<dialog id="action-dialog" class="sheet"><div class="sheet-header"><h2 id="action-title"></h2><button class="icon-button close-dialog" aria-label="Закрыть"><span data-icon="close"></span></button></div><p id="action-description"></p><label id="edit-date-row">Дата<input id="edit-date" type="date"></label><p id="action-error" class="error" role="alert"></p><button id="action-confirm" class="primary wide">Подтвердить</button></dialog>
+<dialog id="picker-dialog" class="sheet picker-sheet"><div class="sheet-header"><h2 id="picker-title">Выбери вариант</h2><button class="icon-button close-dialog" aria-label="Закрыть выбор"><span data-icon="close"></span></button></div><div id="picker-options" role="listbox" aria-label="Варианты"></div></dialog>
+</body></html>

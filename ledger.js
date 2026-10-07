@@ -22,9 +22,17 @@
     return {start,end};
   }
   function validEntry(entry) {
-    if (!Number.isSafeInteger(entry.cents) || entry.cents <= 0 || entry.cents > 100000000000 || !Number.isSafeInteger(entry.createdAt)) return false;
+    if (!entry || !Number.isSafeInteger(entry.cents) || entry.cents <= 0 || entry.cents > 100000000000 || !Number.isSafeInteger(entry.createdAt) || entry.createdAt < new Date(1900,0,1).getTime() || !Number.isFinite(new Date(entry.createdAt).getTime())) return false;
+    if (entry.schema === 2) {
+      const validId = id=>typeof id==='string' && /^[a-zA-Z0-9-]{1,60}$/.test(id);
+      const validName = name=>typeof name==='string' && name.trim().length > 0 && name.length <= 30;
+      if (entry.type==='expense') return validId(entry.categoryId) && validName(entry.categoryName) && typeof entry.note==='string' && entry.note.length<=120;
+      if (entry.type!=='income' || !Array.isArray(entry.allocations) || !entry.allocations.every(item=>item && validId(item.categoryId) && validName(item.name)) || new Set(entry.allocations.map(item=>item.categoryId)).size!==entry.allocations.length) return false;
+      const percentages=entry.allocations.map(item=>item.percent);
+      return validPercentages(percentages) && JSON.stringify(entry.allocations.map(item=>item.cents))===JSON.stringify(allocate(entry.cents,percentages));
+    }
     if (entry.type === 'expense') return Number.isInteger(entry.category) && entry.category >= 0 && entry.category < 4 && typeof entry.note === 'string' && entry.note.length <= 120;
-    return (entry.type === undefined || entry.type === 'income') && validPercentages(entry.percentages) && Array.isArray(entry.amounts) && JSON.stringify(entry.amounts) === JSON.stringify(allocate(entry.cents,entry.percentages));
+    return (entry.type === undefined || entry.type === 'income') && validPercentages(entry.percentages) && entry.percentages.length===4 && Array.isArray(entry.amounts) && JSON.stringify(entry.amounts) === JSON.stringify(allocate(entry.cents,entry.percentages));
   }
   function summarize(entries) {
     const income = [0,0,0,0], expenses = [0,0,0,0];
@@ -36,5 +44,23 @@
     if (![...income,...expenses,totalIncome,totalExpenses].every(Number.isSafeInteger)) throw new Error('Total exceeds safe integer');
     return {income,expenses,totalIncome,totalExpenses,net:totalIncome-totalExpenses};
   }
-  root.MoneyLedger = {dateValue,parseDate,periodBounds,validEntry,summarize};
+  const legacyIds=['debt','life','reserve','free'],legacyNames=['Кредитка','Жизнь','Резерв','Свободные'];
+  function normalize(entry) {
+    if (entry.schema===2) return entry;
+    if (entry.type==='expense') return {...entry,categoryId:legacyIds[entry.category],categoryName:legacyNames[entry.category]};
+    return {...entry,type:'income',allocations:entry.amounts.map((cents,i)=>({categoryId:legacyIds[i],name:legacyNames[i],percent:entry.percentages[i],cents}))};
+  }
+  function summarizeCategories(entries,categories) {
+    const map=new Map(categories.map(category=>[category.id,{id:category.id,name:category.name,icon:category.icon,income:0,expenses:0}]));
+    let totalIncome=0,totalExpenses=0;
+    const get=(id,name,icon)=>{if(!map.has(id)) map.set(id,{id,name,icon,income:0,expenses:0});return map.get(id);};
+    for(const raw of entries) {
+      const entry=normalize(raw);
+      if(entry.type==='expense') {get(entry.categoryId,entry.categoryName,entry.icon).expenses+=entry.cents;totalExpenses+=entry.cents;}
+      else {entry.allocations.forEach(item=>{get(item.categoryId,item.name,item.icon).income+=item.cents;});totalIncome+=entry.cents;}
+    }
+    if (![totalIncome,totalExpenses,...[...map.values()].flatMap(item=>[item.income,item.expenses])].every(Number.isSafeInteger)) throw new Error('Сумма записей слишком велика для точного расчёта.');
+    return {totalIncome,totalExpenses,net:totalIncome-totalExpenses,categories:[...map.values()]};
+  }
+  root.MoneyLedger = {dateValue,parseDate,periodBounds,validEntry,summarize,normalize,summarizeCategories};
 })(globalThis);

@@ -3,7 +3,7 @@
   'use strict';
   const defaults = [35, 40, 10, 15];
   function validPercentages(values) {
-    return Array.isArray(values) && values.length === 4 && values.every(v => Number.isInteger(v) && v >= 0 && v <= 100) && values.reduce((a, b) => a + b, 0) === 100;
+    return Array.isArray(values) && values.length >= 1 && values.length <= 12 && values.every(v => Number.isInteger(v) && v >= 0 && v <= 100) && values.reduce((a, b) => a + b, 0) === 100;
   }
   function parseAmount(raw) {
     const text = raw.trim().replace(/[\s\u00a0\u202f]/g, '').replace(',', '.');
