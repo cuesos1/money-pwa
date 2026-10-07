@@ -15,7 +15,7 @@ function applyAppearance(settings) {
   const dark=settings.theme==='dark' || (settings.theme==='system' && themeQuery.matches);
   document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.dataset.accent=settings.accent;
   document.title=settings.name;$('#app-name').textContent=settings.name;
-  document.querySelector('meta[name="theme-color"]').content=dark?'#101a19':'#f1f4f1';
+  document.querySelector('meta[name="theme-color"]').content=dark?'#0b1224':'#e8eef8';
   for(const [key,classname] of [['hints','no-hints'],['details','no-details'],['chart','no-chart'],['motion','no-motion']])document.body.classList.toggle(classname,!settings[key]);
 }
 themeQuery.addEventListener('change',()=>applyAppearance(draft || config));
@@ -25,7 +25,7 @@ function renderCalculator() {
   $('#income').setAttribute('aria-invalid',String(cents===null));
   const amounts=cents===null?null:allocate(cents,active.map(category=>category.percent));
   const results=$('#results');results.replaceChildren();
-  active.forEach((category,i)=>{const card=el('article','glass card'),top=el('div','card-top'),symbol=el('span','symbol');symbol.append(icon(category.icon));top.append(symbol,el('span','percent',`${category.percent}%`));card.append(top,el('p','card-label',category.name),el('p','card-value',amounts?money(amounts[i]):'—'));results.append(card);});
+  active.forEach((category,i)=>{const card=el('article','glass card');card.dataset.tone=category.icon;const top=el('div','card-top'),symbol=el('span','symbol');symbol.append(icon(category.icon));top.append(symbol,el('span','percent',`${category.percent}%`));card.append(top,el('p','card-label',category.name),el('p','card-value',amounts?money(amounts[i]):'—'));results.append(card);});
   updateButtons();
 }
 function updateButtons() {const cents=parseAmount($('#income').value);$('#record-income').disabled=!ready || recording || cents===null || cents<=0;$('#record-expense').disabled=!ready || savingExpense;$('#settings-toggle').disabled=!ready;}
@@ -105,7 +105,7 @@ function renderSettings(){
   $('#setting-name').value=draft.name;
   picker($('#theme-picker'),'Тема',[{value:'system',label:'Как на устройстве'},{value:'light',label:'Светлая'},{value:'dark',label:'Тёмная'}],draft.theme,value=>{draft.theme=value;applyAppearance(draft);draftChanged();});
   const colors=$('#accent-options');colors.replaceChildren();
-  for(const [value,label,color] of [['jade','Шалфей','#93b09f'],['blue','Туман','#8ca9cb'],['sand','Песок','#b5a07a'],['plum','Слива','#a598b6']]){const button=el('button','color-option');button.type='button';button.style.setProperty('--color',color);button.setAttribute('aria-label',label);button.setAttribute('aria-pressed',String(draft.accent===value));button.addEventListener('click',()=>{draft.accent=value;applyAppearance(draft);colors.querySelectorAll('button').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));draftChanged();});colors.append(button);}
+  for(const [value,label,color] of [['jade','Шалфей','#40cbaa'],['blue','Туман','#5e9ef5'],['sand','Песок','#e7ae54'],['plum','Слива','#af85ea']]){const button=el('button','color-option');button.type='button';button.style.setProperty('--color',color);button.setAttribute('aria-label',label);button.setAttribute('aria-pressed',String(draft.accent===value));button.addEventListener('click',()=>{draft.accent=value;applyAppearance(draft);colors.querySelectorAll('button').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));draftChanged();});colors.append(button);}
   const toggles=$('#view-toggles');toggles.replaceChildren();
   for(const [key,label] of [['details','Подробные суммы по категориям'],['hints','Подсказки и пояснения'],['chart','График доходов'],['motion','Плавные анимации']]){const row=el('label','switch-row'),input=el('input');input.type='checkbox';input.checked=draft[key];input.setAttribute('role','switch');input.addEventListener('change',()=>{draft[key]=input.checked;applyAppearance(draft);draftChanged();});row.append(el('span','',label),input);toggles.append(row);}
   renderCategoryEditors();renderDebtSettings();
