@@ -75,3 +75,9 @@ for(const p of [[100],[10,20,30,20,20],[0,0,0,0,0,0,0,0,0,0,0,100]])assert.equal
 console.log('PASS: variable categories, legacy normalization, settings validation, amortization, debt allocation and no-debt scenario.');
 
 assert.equal(MoneyStore.validConfig({...cfg,categories:[null]}),false);assert.equal(MoneyStore.validConfig({...cfg,debts:[null]}),false);assert.equal(validEntry({...modern,allocations:[null]}),false);
+
+require('./extras-store.js');
+const extra=MoneyExtras.defaultExtras();assert.ok(MoneyExtras.validExtras(extra));
+const withGoal={...extra,goals:[{id:'goal',name:'Подушка',target:100000,saved:25000,deadline:''}]};assert.ok(MoneyExtras.validExtras(withGoal));assert.equal(MoneyExtras.validExtras({...withGoal,goals:[{...withGoal.goals[0],target:0}]}),false);
+const fullBackup={format:'potok-backup',version:1,config:cfg,extras:withGoal,entries:[{...legacy,id:1}]};assert.ok(MoneyExtras.validBackup(fullBackup));assert.equal(MoneyExtras.validBackup({...fullBackup,version:2}),false);assert.equal(MoneyExtras.validBackup({...fullBackup,entries:[{...legacy,id:1},{...legacy,id:1}]}),false);assert.equal(MoneyExtras.validBackup({...fullBackup,extras:{}}),false);
+console.log('PASS: goals, templates and complete backup validation.');

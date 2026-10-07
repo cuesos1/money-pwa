@@ -43,7 +43,7 @@
       const transaction = db.transaction(stores,mode);let result, failure;
       const abort = error=>{failure=error;transaction.abort();};
       try { action(transaction,value=>{result=value;},abort); } catch(error) {abort(error);}
-      transaction.oncomplete=()=>resolve(result);
+      transaction.oncomplete=()=>{resolve(result);if(mode==='readwrite')root.dispatchEvent(new CustomEvent('potok-datachanged',{detail:{stores}}));};
       transaction.onabort=()=>reject(failure || transaction.error || new Error('Не удалось сохранить данные.'));
       transaction.onerror=()=>{};
     });
@@ -91,5 +91,22 @@
       const entry={...request.result,createdAt};if (!MoneyLedger.validEntry(entry)) {abort(new Error('Некорректная дата.'));return;}store.put(entry);
     };
   });
-  root.MoneyStore={defaultCategories,defaultConfig,validConfig,icons,legacyIds,open,getConfig,saveConfig,addIncome,addExpense,entries,remove,editDate};
+  const getExtras=()=>transact(['settings'],'readonly',(tx,done,abort)=>{const request=tx.objectStore('settings').get('extras');request.onsuccess=()=>{const value=request.result || MoneyExtras.defaultExtras();if(!MoneyExtras.validExtras(value)){abort(new Error('Дополнительные настройки повреждены.'));return;}done(value);};});
+  const saveExtras=value=>transact(['settings'],'readwrite',(tx,done,abort)=>{
+    if(!MoneyExtras.validExtras(value)){abort(new Error('Проверь цели и быстрые расходы.'));return;}
+    const store=tx.objectStore('settings'),request=store.get('extras');request.onsuccess=()=>{const previous=request.result || MoneyExtras.defaultExtras();if(previous.revision!==value.revision){abort(new Error('Данные изменились в другой вкладке. Перезапусти приложение.'));return;}const next={...value,revision:value.revision+1};store.put(next);done(next);};
+  });
+  const backup=()=>transact(['entries','settings'],'readonly',(tx,done)=>{
+    const result={format:'potok-backup',version:1,createdAt:new Date().toISOString()},settings=tx.objectStore('settings');
+    const records=tx.objectStore('entries').getAll();records.onsuccess=()=>{result.entries=records.result;};
+    const cfg=settings.get('config');cfg.onsuccess=()=>{result.config=cfg.result;};
+    const extra=settings.get('extras');extra.onsuccess=()=>{result.extras=extra.result || MoneyExtras.defaultExtras();};done(result);
+  });
+  const restore=value=>transact(['entries','settings'],'readwrite',(tx,done,abort)=>{
+    if(!MoneyExtras.validBackup(value)){abort(new Error('Файл не является корректной копией «Потока».'));return;}
+    const settings=tx.objectStore('settings'),cfg=settings.get('config'),extra=settings.get('extras');let loaded=0;
+    function write(){if(++loaded!==2)return;const store=tx.objectStore('entries');store.clear();value.entries.forEach(entry=>store.put(entry));settings.put({...value.config,revision:Math.max(cfg.result?.revision || 0,value.config.revision)+1});settings.put({...value.extras,welcomed:true,revision:Math.max(extra.result?.revision || 0,value.extras.revision)+1});}
+    cfg.onsuccess=write;extra.onsuccess=write;
+  });
+  root.MoneyStore={defaultCategories,defaultConfig,validConfig,icons,legacyIds,open,getConfig,saveConfig,addIncome,addExpense,entries,remove,editDate,getExtras,saveExtras,backup,restore};
 })(globalThis);

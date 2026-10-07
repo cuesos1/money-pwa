@@ -1,6 +1,6 @@
 'use strict';
-const CACHE = 'money-pwa-v7';
-const ASSETS = ['./', './index.html', './styles.css', './calculator.js', './finance.js', './store.js', './ui.js', './icon-data.js', './ledger.js', './app.js', './manifest.webmanifest', './icons/icon-180-v6.png', './icons/icon-192-v6.png', './icons/icon-512-v6.png'];
+const CACHE = 'money-pwa-v9';
+const ASSETS = ['./', './index.html', './styles.css', './calculator.js', './finance.js', './store.js', './extras-store.js', './extras.js', './ui.js', './icon-data.js', './ledger.js', './app.js', './manifest.webmanifest', './icons/icon-180-v9.png', './icons/icon-192-v9.png', './icons/icon-512-v9.png'];
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS))); });
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('money-pwa-') && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim()));

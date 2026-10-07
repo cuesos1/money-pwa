@@ -15,7 +15,7 @@ function applyAppearance(settings) {
   const dark=settings.theme==='dark' || (settings.theme==='system' && themeQuery.matches);
   document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.dataset.accent=settings.accent;
   document.title=settings.name;$('#app-name').textContent=settings.name;
-  document.querySelector('meta[name="theme-color"]').content=dark?'#0b1224':'#e8eef8';
+  document.querySelector('meta[name="theme-color"]').content=dark?'#101a17':'#edf1ee';
   for(const [key,classname] of [['hints','no-hints'],['details','no-details'],['chart','no-chart'],['motion','no-motion']])document.body.classList.toggle(classname,!settings[key]);
 }
 themeQuery.addEventListener('change',()=>applyAppearance(draft || config));
@@ -32,7 +32,7 @@ function updateButtons() {const cents=parseAmount($('#income').value);$('#record
 $('#income').addEventListener('input',renderCalculator);
 for(const id of ['income-date','expense-date']) {$('#'+id).value=today();$('#'+id).max=today();$('#'+id).min='1900-01-01';}
 $('#period-start').value=dateValue(new Date(new Date().getFullYear(),new Date().getMonth(),1));$('#period-end').value=today();
-function showTab(stats) {$('#plan-panel').hidden=stats;$('#stats-panel').hidden=!stats;$('#tab-plan').setAttribute('aria-current',stats?'false':'page');$('#tab-stats').setAttribute('aria-current',stats?'page':'false');if(stats)refreshStats();}
+function showTab(stats) {$('#goals-panel').hidden=true;$('#tab-goals').setAttribute('aria-current','false');$('#plan-panel').hidden=stats;$('#stats-panel').hidden=!stats;$('#tab-plan').setAttribute('aria-current',stats?'false':'page');$('#tab-stats').setAttribute('aria-current',stats?'page':'false');if(stats)refreshStats();}
 $('#tab-plan').addEventListener('click',()=>showTab(false));$('#tab-stats').addEventListener('click',()=>showTab(true));
 picker($('#period-picker'),'Период',[{value:'7',label:'За 7 дней'},{value:'month',label:'Этот месяц'},{value:'previous',label:'Прошлый месяц'},{value:'year',label:'Этот год'},{value:'all',label:'Всё время'},{value:'custom',label:'Свои даты'}],period,value=>{period=value;$('#custom-dates').hidden=value!=='custom';refreshStats();});
 for(const id of ['period-start','period-end'])$('#'+id).addEventListener('change',refreshStats);
@@ -105,7 +105,7 @@ function renderSettings(){
   $('#setting-name').value=draft.name;
   picker($('#theme-picker'),'Тема',[{value:'system',label:'Как на устройстве'},{value:'light',label:'Светлая'},{value:'dark',label:'Тёмная'}],draft.theme,value=>{draft.theme=value;applyAppearance(draft);draftChanged();});
   const colors=$('#accent-options');colors.replaceChildren();
-  for(const [value,label,color] of [['jade','Шалфей','#40cbaa'],['blue','Туман','#5e9ef5'],['sand','Песок','#e7ae54'],['plum','Слива','#af85ea']]){const button=el('button','color-option');button.type='button';button.style.setProperty('--color',color);button.setAttribute('aria-label',label);button.setAttribute('aria-pressed',String(draft.accent===value));button.addEventListener('click',()=>{draft.accent=value;applyAppearance(draft);colors.querySelectorAll('button').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));draftChanged();});colors.append(button);}
+  for(const [value,label,color] of [['jade','Шалфей','#8ea795'],['blue','Туман','#8ca0b8'],['sand','Песок','#b5a78c'],['plum','Слива','#ac9bb6']]){const button=el('button','color-option');button.type='button';button.style.setProperty('--color',color);button.setAttribute('aria-label',label);button.setAttribute('aria-pressed',String(draft.accent===value));button.addEventListener('click',()=>{draft.accent=value;applyAppearance(draft);colors.querySelectorAll('button').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));draftChanged();});colors.append(button);}
   const toggles=$('#view-toggles');toggles.replaceChildren();
   for(const [key,label] of [['details','Подробные суммы по категориям'],['hints','Подсказки и пояснения'],['chart','График доходов'],['motion','Плавные анимации']]){const row=el('label','switch-row'),input=el('input');input.type='checkbox';input.checked=draft[key];input.setAttribute('role','switch');input.addEventListener('change',()=>{draft[key]=input.checked;applyAppearance(draft);draftChanged();});row.append(el('span','',label),input);toggles.append(row);}
   renderCategoryEditors();renderDebtSettings();
@@ -181,5 +181,5 @@ if(matchMedia('(display-mode: standalone)').matches || navigator.standalone)$('#
 applyAppearance(config);renderCalculator();
 function finishSplash(){$('#splash').classList.add('done');setTimeout(()=>{$('#splash').hidden=true;},350);}
 setTimeout(finishSplash,2500);
-(async()=>{try{await MoneyStore.open();config=await MoneyStore.getConfig();ready=true;applyAppearance(config);renderCalculator();await renderStats();}catch(error){$('#record-status').textContent=errorText(error);updateButtons();}finally{finishSplash();}})();
+(async()=>{try{await MoneyStore.open();config=await MoneyStore.getConfig();ready=true;applyAppearance(config);renderCalculator();await renderStats();window.dispatchEvent(new Event('potok-ready'));}catch(error){$('#record-status').textContent=errorText(error);updateButtons();}finally{finishSplash();}})();
 if('serviceWorker' in navigator && isSecureContext){navigator.serviceWorker.register('./sw.js').then(()=>navigator.serviceWorker.ready).then(()=>{$('#offline-status').textContent='Готово офлайн · всё хранится на устройстве';}).catch(()=>{$('#offline-status').textContent='Офлайн-кеш недоступен. Проверь HTTPS или localhost.';});}else $('#offline-status').textContent='Для установки и офлайн-режима нужен HTTPS или localhost.';
