@@ -1,8 +1,8 @@
 
 'use strict';
-let extras=null,goalId=null,backupCandidate=null,extrasBusy=false,overviewRevision=0;
+let extras=null,goalId=null,backupCandidate=null,extrasBusy=false,overviewRevision=0,goalCategory='',localEntries=[],localViewRevision=0;
 const cloneExtras=()=>JSON.parse(JSON.stringify(extras));
-async function persistExtras(next){extras=await MoneyStore.saveExtras(next);renderExtras();}
+async function persistExtras(next){extras=await MoneyStore.saveExtras(next);await refreshLocalViews();}
 function renderExtras(){
  if(!extras)return;
  const quick=$('#quick-expenses');quick.replaceChildren();
@@ -14,20 +14,21 @@ function renderExtras(){
  const goals=$('#goal-list');goals.replaceChildren();
  if(!extras.goals.length)goals.append(el('p','hint','Например, подушка на 100 000 ₽ или отпуск на 60 000 ₽.'));
  extras.goals.forEach(goal=>{
-  const card=el('article','glass goal-card'),heading=el('div','section-heading'),edit=el('button','text-button','Изменить');edit.type='button';edit.setAttribute('aria-label','Изменить цель '+goal.name);edit.addEventListener('click',()=>openGoal(goal));heading.append(el('h3','',goal.name),edit);const bar=el('div','goal-track'),fill=el('div','goal-fill');fill.style.width=Math.min(100,goal.saved/goal.target*100)+'%';bar.append(fill);bar.setAttribute('role','progressbar');bar.setAttribute('aria-label',goal.name);bar.setAttribute('aria-valuemin','0');bar.setAttribute('aria-valuemax',String(goal.target));bar.setAttribute('aria-valuenow',String(Math.min(goal.saved,goal.target)));
-  card.append(heading,el('p','goal-amount',money(goal.saved)),el('p','hint','из '+money(goal.target)),bar);
-  const remaining=Math.max(0,goal.target-goal.saved);let description=remaining?'Осталось '+money(remaining):'Цель достигнута.';
+  const progress=MoneyExtras.goalProgress(goal,localEntries),saved=progress.total;
+  const card=el('article','glass goal-card'),heading=el('div','section-heading'),edit=el('button','text-button','Изменить');edit.type='button';edit.setAttribute('aria-label','Изменить цель '+goal.name);edit.addEventListener('click',()=>openGoal(goal));heading.append(el('h3','',goal.name),edit);const bar=el('div','goal-track'),fill=el('div','goal-fill');fill.style.width=Math.min(100,saved/goal.target*100)+'%';bar.append(fill);bar.setAttribute('role','progressbar');bar.setAttribute('aria-label',goal.name);bar.setAttribute('aria-valuemin','0');bar.setAttribute('aria-valuemax',String(goal.target));bar.setAttribute('aria-valuenow',String(Math.min(saved,goal.target)));
+  card.append(heading,el('p','goal-amount',money(saved)),el('p','hint','из '+money(goal.target)),bar);
+  const remaining=Math.max(0,goal.target-saved);let description=remaining?'Осталось '+money(remaining):'Цель достигнута.';
   if(goal.deadline && remaining){const deadline=parseDate(goal.deadline),now=new Date();if(dateValue(deadline)<today())description+=' Срок прошёл — можно выбрать новую дату.';else{const months=Math.max(1,(deadline.getFullYear()-now.getFullYear())*12+deadline.getMonth()-now.getMonth()+(deadline.getDate()>now.getDate()?1:0));description+=` До ${deadline.toLocaleDateString('ru-RU')}: примерно ${money(Math.ceil(remaining/months))} в месяц.`;}}
-  card.append(el('p','hint',description));goals.append(card);
+  card.append(el('p','hint',description));if(goal.autoCategoryId || progress.automatic){const category=config.categories.find(item=>item.id===goal.autoCategoryId);card.append(el('p','hint',`Вручную: ${money(goal.saved)} · из доходов: ${money(progress.automatic)}. ${category?`Новые доходы: ${category.name} (${category.enabled?category.percent:0}%).`:'Автопополнение выключено.'}`));}goals.append(card);
  });
 }
-$('#tab-goals').addEventListener('click',()=>{showTab(false);$('#plan-panel').hidden=true;$('#goals-panel').hidden=false;$('#tab-plan').setAttribute('aria-current','false');$('#tab-goals').setAttribute('aria-current','page');renderExtras();});
-function openGoal(goal){goalId=goal?.id || null;$('#goal-name').value=goal?.name || '';$('#goal-target').value=goal?String(goal.target/100):'';$('#goal-saved').value=goal?String(goal.saved/100):'';$('#goal-deadline').value=goal?.deadline || '';$('#goal-status').textContent='';$('#goal-dialog').showModal();}
+$('#tab-goals').addEventListener('click',()=>{showSection('goals');refreshLocalViews().catch(error=>{$('#goal-list').textContent=errorText(error);});});
+function openGoal(goal){goalCategory=goal?.autoCategoryId || '';const options=[{value:'',label:'Без автопополнения'},...config.categories.filter(category=>(category.enabled || category.id===goalCategory) && !extras.goals.some(other=>other.id!==goal?.id && other.autoCategoryId===category.id)).map(category=>({value:category.id,label:`${category.name} · ${category.enabled?category.percent:0}%`}))];if(goalCategory && !options.some(item=>item.value===goalCategory))options.push({value:goalCategory,label:'Категория недоступна · 0%'});picker($('#goal-category-picker'),'Автопополнение из категории',options,goalCategory,value=>{goalCategory=value;});goalId=goal?.id || null;$('#goal-name').value=goal?.name || '';$('#goal-target').value=goal?String(goal.target/100):'';$('#goal-saved').value=goal?String(goal.saved/100):'';$('#goal-deadline').value=goal?.deadline || '';$('#goal-status').textContent='';$('#goal-dialog').showModal();}
 $('#goal-add').addEventListener('click',()=>{if(extras && extras.goals.length<20)openGoal(null);else $('#extras-status').textContent='Можно сохранить до 20 целей.';});
 $('#goal-close').addEventListener('click',()=>$('#goal-dialog').close());
 $('#goal-form').addEventListener('submit',async event=>{
  event.preventDefault();if(!extras || extrasBusy)return;
- const goal={id:goalId || crypto.randomUUID(),name:$('#goal-name').value.trim(),target:parseAmount($('#goal-target').value),saved:parseAmount($('#goal-saved').value),deadline:$('#goal-deadline').value};
+ const goal={id:goalId || crypto.randomUUID(),name:$('#goal-name').value.trim(),target:parseAmount($('#goal-target').value),saved:parseAmount($('#goal-saved').value),deadline:$('#goal-deadline').value,autoCategoryId:goalCategory};
  const next=cloneExtras();if(goalId)next.goals=next.goals.map(item=>item.id===goalId?goal:item);else next.goals.push(goal);
  if(!MoneyExtras.validExtras(next)){$('#goal-status').textContent='Проверь название, положительную цель, накопленную сумму и дату.';return;}
  extrasBusy=true;const button=$('#goal-form button[type=submit]');button.disabled=true;
@@ -53,7 +54,7 @@ async function renderMonth(){
  $('#month-comparison').textContent=text;
 }
 $('#tab-stats').addEventListener('click',()=>renderMonth().catch(error=>{$('#month-comparison').textContent=errorText(error);}));
-window.addEventListener('potok-datachanged',()=>{setTimeout(()=>{renderMonth().catch(error=>{$('#month-comparison').textContent=errorText(error);});renderExtras();},0);});
+window.addEventListener('potok-datachanged',()=>{setTimeout(()=>{renderMonth().catch(error=>{$('#month-comparison').textContent=errorText(error);});refreshLocalViews().catch(error=>{$('#extras-status').textContent=errorText(error);});},0);});
 function openRestore(welcome){backupCandidate=null;$('#restore-title').textContent=welcome?'Добро пожаловать в «Поток»':'Загрузить копию';$('#restore-summary').textContent=welcome?'Уже пользовался приложением? Загрузи сохранённый файл, и история с настройками вернётся. Можно начать без копии.':'Выбери сохранённый файл. Перед восстановлением покажем его содержимое.';$('#restore-status').textContent='';$('#restore-confirm').hidden=true;$('#welcome-load').hidden=false;$('#restore-cancel').textContent=welcome?'Начать без копии':'Отмена';$('#restore-dialog').showModal();}
 $('#backup-load').addEventListener('click',()=>openRestore(false));
 $('#welcome-load').addEventListener('click',()=>{$('#backup-file').value='';$('#backup-file').click();});
@@ -72,6 +73,32 @@ $('#restore-confirm').addEventListener('click',async()=>{
  try{await MoneyStore.restore(backupCandidate);location.reload();}catch(error){$('#restore-status').textContent=errorText(error);button.disabled=false;}
 });
 window.addEventListener('potok-ready',async()=>{
- try{extras=await MoneyStore.getExtras();renderExtras();await renderMonth();if(!extras.welcomed){const snapshot=await MoneyStore.backup();if(!snapshot.entries.length && !extras.goals.length && !config.debts.length)openRestore(true);else{const next=cloneExtras();next.welcomed=true;await persistExtras(next);}}}catch(error){$('#extras-status').textContent=errorText(error);}
+ try{await refreshLocalViews();await renderMonth();if(!extras.welcomed){const snapshot=await MoneyStore.backup();if(!snapshot.entries.length && !extras.goals.length && !config.debts.length)openRestore(true);else{const next=cloneExtras();next.welcomed=true;await persistExtras(next);}}}catch(error){$('#extras-status').textContent=errorText(error);}
 });
-document.addEventListener('visibilitychange',async()=>{if(document.hidden || !ready)return;try{extras=await MoneyStore.getExtras();renderExtras();await renderMonth();}catch(error){$('#extras-status').textContent=errorText(error);}});
+document.addEventListener('visibilitychange',async()=>{if(document.hidden || !ready)return;try{await refreshLocalViews();await renderMonth();}catch(error){$('#extras-status').textContent=errorText(error);}});
+
+let expensePeriod='month';
+async function refreshLocalViews(){
+ if(!ready)return;const revision=++localViewRevision;
+ const [next,records]=await Promise.all([MoneyStore.getExtras(),MoneyStore.entries(new Date(1900,0,1).getTime(),8640000000000000)]);
+ if(revision!==localViewRevision)return;
+ extras=next;localEntries=records;renderExtras();renderExpenses();
+}
+function renderExpenses(){
+ const bounds=periodBounds(expensePeriod,new Date()),expenses=localEntries.filter(validEntry).filter(entry=>entry.type==='expense').map(normalize),selected=expenses.filter(entry=>entry.createdAt>=bounds.start.getTime() && entry.createdAt<bounds.end.getTime()),totals=summarizeCategories(selected,config.categories);
+ $('#expenses-sum').textContent=money(totals.totalExpenses);
+ const last=new Date(bounds.end.getFullYear(),bounds.end.getMonth(),bounds.end.getDate()-1);
+ $('#expenses-range').textContent=expensePeriod==='all'?'За всё время':`${bounds.start.toLocaleDateString('ru-RU')} — ${last.toLocaleDateString('ru-RU')}`;
+ $('#expenses-count').textContent=selected.length?`Записей: ${selected.length}`:'Расходов пока нет. Нажми «+ Расход», чтобы добавить первый.';
+ $('#expenses-status').textContent=localEntries.some(entry=>!validEntry(entry))?'Есть повреждённые записи: они не включены в итоги. Данные не удалены.':'';
+ renderEntryList(selected,$('#expense-history'));
+ const breakdown=$('#expense-category-totals');breakdown.replaceChildren();
+ totals.categories.filter(category=>category.expenses).sort((a,b)=>b.expenses-a.expenses).forEach(category=>{const row=el('div','expense-category-row');row.append(el('span','',category.name),el('strong','',money(category.expenses)));breakdown.append(row);});
+ const frequent=$('#frequent-expenses');frequent.replaceChildren();
+ const suggestions=MoneyExtras.frequentExpenses(localEntries,config.categories);
+ if(!suggestions.length)frequent.append(el('p','hint','После двух записей с одинаковым описанием здесь появится подсказка.'));
+ suggestions.forEach(item=>{const button=el('button','quick-chip',`${item.note} · ${money(item.cents)}`);button.type='button';button.title=config.categories.find(category=>category.id===item.categoryId)?.name || '';button.addEventListener('click',()=>{expenseCategory=item.categoryId;$('#expense-open').click();$('#expense-note').value=item.note;$('#expense-amount').value=String(item.cents/100);$('#expense-date').value=today();$('#expense-amount').focus();});frequent.append(button);});
+}
+$('#tab-expenses').addEventListener('click',()=>{showSection('expenses');refreshLocalViews().catch(error=>{$('#expenses-status').textContent=errorText(error);});});
+$('#expense-add').addEventListener('click',()=>$('#expense-open').click());
+picker($('#expense-period-picker'),'Период',[{value:'7',label:'За 7 дней'},{value:'month',label:'Этот месяц'},{value:'previous',label:'Прошлый месяц'},{value:'all',label:'Всё время'}],expensePeriod,value=>{expensePeriod=value;renderExpenses();});

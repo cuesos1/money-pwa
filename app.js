@@ -32,7 +32,8 @@ function updateButtons() {const cents=parseAmount($('#income').value);$('#record
 $('#income').addEventListener('input',renderCalculator);
 for(const id of ['income-date','expense-date']) {$('#'+id).value=today();$('#'+id).max=today();$('#'+id).min='1900-01-01';}
 $('#period-start').value=dateValue(new Date(new Date().getFullYear(),new Date().getMonth(),1));$('#period-end').value=today();
-function showTab(stats) {$('#goals-panel').hidden=true;$('#tab-goals').setAttribute('aria-current','false');$('#plan-panel').hidden=stats;$('#stats-panel').hidden=!stats;$('#tab-plan').setAttribute('aria-current',stats?'false':'page');$('#tab-stats').setAttribute('aria-current',stats?'page':'false');if(stats)refreshStats();}
+function showSection(name) {for(const tab of ['plan','expenses','stats','goals']){$('#'+tab+'-panel').hidden=tab!==name;$('#tab-'+tab).setAttribute('aria-current',tab===name?'page':'false');}if(name==='stats')refreshStats();}
+function showTab(stats) {showSection(stats?'stats':'plan');}
 $('#tab-plan').addEventListener('click',()=>showTab(false));$('#tab-stats').addEventListener('click',()=>showTab(true));
 picker($('#period-picker'),'Период',[{value:'7',label:'За 7 дней'},{value:'month',label:'Этот месяц'},{value:'previous',label:'Прошлый месяц'},{value:'year',label:'Этот год'},{value:'all',label:'Всё время'},{value:'custom',label:'Свои даты'}],period,value=>{period=value;$('#custom-dates').hidden=value!=='custom';refreshStats();});
 for(const id of ['period-start','period-end'])$('#'+id).addEventListener('change',refreshStats);
@@ -58,14 +59,19 @@ async function renderStats() {
   totals.categories.filter(category=>category.income || category.expenses || config.categories.some(current=>current.id===category.id && current.enabled)).forEach(category=>{const card=el('div','breakdown');card.append(el('p','breakdown-label',category.name),el('p','breakdown-value',money(category.income-category.expenses)),el('p','breakdown-detail',`Выделено ${money(category.income)} · потрачено ${money(category.expenses)}`));breakdown.append(card);});
   $('#week-count').textContent=entries.length?`Записей: ${entries.length}. Остатки за выбранный период.`:'За этот период записей нет.';
   const history=$('#history');history.replaceChildren();
-  entries.sort((a,b)=>b.createdAt-a.createdAt || b.id-a.id).forEach(entry=>{
+  renderEntryList(entries,history);
+  if(raw.length!==entries.length)$('#period-error').textContent='Некоторые записи повреждены и не включены в итоги. Исходные данные не удалены.';
+}
+function renderEntryList(entries,history) {
+  history.replaceChildren();
+  const formatDate=date=>date.toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'});
+  [...entries].sort((a,b)=>b.createdAt-a.createdAt || b.id-a.id).forEach(entry=>{
     const expense=entry.type==='expense',li=el('li'),head=el('div','entry-head'),description=el('div');description.append(el('strong','history-amount',`${expense?'−':'+'}${money(entry.cents)}`),el('span','history-date',formatDate(new Date(entry.createdAt))),el('span','history-note',expense?`${entry.categoryName}${entry.note?' · '+entry.note:''}`:'Доход'));
     head.append(description);const actions=el('div','entry-actions'),edit=el('button','', 'Изменить дату'),remove=el('button','delete-entry','Удалить');edit.type=remove.type='button';edit.setAttribute('aria-label',`Изменить дату ${expense?'расхода':'дохода'} ${money(entry.cents)}`);remove.setAttribute('aria-label',`Удалить ${expense?'расход':'доход'} ${money(entry.cents)}`);edit.addEventListener('click',()=>entryAction(entry,'date'));remove.addEventListener('click',()=>entryAction(entry,'delete'));actions.append(edit,remove);li.append(head,actions);history.append(li);
   });
-  if(raw.length!==entries.length)$('#period-error').textContent='Некоторые записи повреждены и не включены в итоги. Исходные данные не удалены.';
 }
 let currentAction=null;
-function entryAction(entry,mode) {currentAction={entry,mode};$('#action-title').textContent=mode==='date'?'Дата записи':'Удалить запись?';$('#action-description').textContent=`${entry.type==='expense'?'Расход':'Доход'} · ${money(entry.cents)}`;$('#edit-date-row').hidden=mode!=='date';$('#edit-date').value=dateValue(new Date(entry.createdAt));$('#edit-date').max=today();$('#edit-date').min='1900-01-01';$('#action-error').textContent='';$('#action-confirm').disabled=false;$('#action-confirm').textContent=mode==='date'?'Сохранить дату':'Удалить';$('#action-dialog').showModal();}
+function entryAction(entry,mode) {currentAction={entry,mode};$('#action-title').textContent=mode==='date'?'Дата записи':'Удалить запись?';$('#action-description').textContent=`${entry.type==='expense'?'Расход':'Доход'} · ${money(entry.cents)}${mode==='delete' && entry.allocations?.some(item=>item.goalId)?' · Вклад этого дохода в цели тоже будет убран.':''}`;$('#edit-date-row').hidden=mode!=='date';$('#edit-date').value=dateValue(new Date(entry.createdAt));$('#edit-date').max=today();$('#edit-date').min='1900-01-01';$('#action-error').textContent='';$('#action-confirm').disabled=false;$('#action-confirm').textContent=mode==='date'?'Сохранить дату':'Удалить';$('#action-dialog').showModal();}
 $('#action-confirm').addEventListener('click',async()=>{
   if(!currentAction)return;const {entry,mode}=currentAction,button=$('#action-confirm');button.disabled=true;
   try {if(mode==='delete')await MoneyStore.remove(entry.id);else{const timestamp=selectedTimestamp($('#edit-date').value);if(timestamp===null)throw new Error('Выбери дату не позже сегодня.');await MoneyStore.editDate(entry.id,timestamp);}$('#action-dialog').close();refreshStats();}

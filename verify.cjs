@@ -81,3 +81,16 @@ const extra=MoneyExtras.defaultExtras();assert.ok(MoneyExtras.validExtras(extra)
 const withGoal={...extra,goals:[{id:'goal',name:'Подушка',target:100000,saved:25000,deadline:''}]};assert.ok(MoneyExtras.validExtras(withGoal));assert.equal(MoneyExtras.validExtras({...withGoal,goals:[{...withGoal.goals[0],target:0}]}),false);
 const fullBackup={format:'potok-backup',version:1,config:cfg,extras:withGoal,entries:[{...legacy,id:1}]};assert.ok(MoneyExtras.validBackup(fullBackup));assert.equal(MoneyExtras.validBackup({...fullBackup,version:2}),false);assert.equal(MoneyExtras.validBackup({...fullBackup,entries:[{...legacy,id:1},{...legacy,id:1}]}),false);assert.equal(MoneyExtras.validBackup({...fullBackup,extras:{}}),false);
 console.log('PASS: goals, templates and complete backup validation.');
+
+const linked={...modern,allocations:[{...modern.allocations[0],goalId:'goal'}]};
+assert.ok(validEntry(linked));assert.equal(validEntry({...linked,allocations:[{...linked.allocations[0],goalId:'bad id'}]}),false);
+assert.deepEqual(MoneyExtras.goalProgress(withGoal.goals[0],[modern,linked]),{automatic:1000,total:26000});
+assert.deepEqual(MoneyExtras.goalProgress(withGoal.goals[0],[modern]),{automatic:0,total:25000});
+assert.equal(MoneyExtras.validExtras({...extra,goals:[{...withGoal.goals[0],autoCategoryId:'life'},{...withGoal.goals[0],id:'other',autoCategoryId:'life'}]}),false);
+const bread={schema:2,type:'expense',cents:4200,createdAt:now.getTime(),categoryId:'life',categoryName:'Жизнь',note:'Купил хлеб'};
+assert.equal(MoneyExtras.frequentExpenses([bread],cfg.categories).length,0);
+const suggested=MoneyExtras.frequentExpenses([{...bread,id:1},{...bread,id:2,note:'купил  ХЛЕБ',cents:5000}],cfg.categories);
+assert.equal(suggested.length,1);assert.equal(suggested[0].count,2);assert.equal(suggested[0].cents,5000);
+assert.equal(MoneyExtras.frequentExpenses([bread,bread],cfg.categories.map(c=>({...c,enabled:false}))).length,0);
+assert.ok(MoneyExtras.validBackup({...fullBackup,extras:{...withGoal,goals:[{...withGoal.goals[0],autoCategoryId:'life'}]},entries:[{...linked,id:1}]}));
+console.log('PASS: goal snapshots, deletion reversal, legacy goals, unique goal links, frequent expense normalization and backup compatibility.');

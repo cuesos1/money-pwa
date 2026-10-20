@@ -27,7 +27,7 @@
       const validId = id=>typeof id==='string' && /^[a-zA-Z0-9-]{1,60}$/.test(id);
       const validName = name=>typeof name==='string' && name.trim().length > 0 && name.length <= 30;
       if (entry.type==='expense') return validId(entry.categoryId) && validName(entry.categoryName) && typeof entry.note==='string' && entry.note.length<=120;
-      if (entry.type!=='income' || !Array.isArray(entry.allocations) || !entry.allocations.every(item=>item && validId(item.categoryId) && validName(item.name)) || new Set(entry.allocations.map(item=>item.categoryId)).size!==entry.allocations.length) return false;
+      if (entry.type!=='income' || !Array.isArray(entry.allocations) || !entry.allocations.every(item=>item && validId(item.categoryId) && validName(item.name) && (item.goalId===undefined || validId(item.goalId))) || new Set(entry.allocations.map(item=>item.categoryId)).size!==entry.allocations.length) return false;
       const percentages=entry.allocations.map(item=>item.percent);
       return validPercentages(percentages) && JSON.stringify(entry.allocations.map(item=>item.cents))===JSON.stringify(allocate(entry.cents,percentages));
     }

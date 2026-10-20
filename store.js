@@ -63,11 +63,16 @@
       request.onsuccess=()=>{
         const config=request.result;
         if (!validConfig(config) || config.revision!==expectedRevision) {abort(new Error('Настройки изменились. Обнови приложение перед записью.'));return;}
+        const extraRequest=tx.objectStore('settings').get('extras');extraRequest.onsuccess=()=>{
+        const extra=extraRequest.result || MoneyExtras.defaultExtras();
+        if(!MoneyExtras.validExtras(extra)){abort(new Error('Настройки целей повреждены. Доход не записан.'));return;}
+        const goalLinks=new Map(extra.goals.filter(goal=>goal.autoCategoryId).map(goal=>[goal.autoCategoryId,goal.id]));
         const categories=config.categories.filter(category=>category.enabled);
         const amounts=MoneyCalculator.allocate(cents,categories.map(category=>category.percent));
-        const entry={type:'income',schema:2,cents,createdAt,allocations:categories.map((category,i)=>({categoryId:category.id,name:category.name,icon:category.icon,percent:category.percent,cents:amounts[i]}))};
+        const entry={type:'income',schema:2,cents,createdAt,allocations:categories.map((category,i)=>({categoryId:category.id,name:category.name,icon:category.icon,percent:category.percent,cents:amounts[i],...(goalLinks.has(category.id)?{goalId:goalLinks.get(category.id)}:{})}))};
         if (!MoneyLedger.validEntry(entry)) {abort(new Error('Некорректный доход.'));return;}
         const write=tx.objectStore('entries').add(entry);write.onsuccess=()=>done(write.result);
+        };
       };
     });
   }
